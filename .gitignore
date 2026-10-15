@@ -43,3 +43,8 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+
+# provider agent skills installed by vercel integration (local tooling)
+.agents/
+.claude/skills/neon*
+skills-lock.json
