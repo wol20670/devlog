@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { authLog } from "./auth-logger";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema, transaction: true }),
@@ -17,6 +18,7 @@ export const auth = betterAuth({
     },
   },
   account: { encryptOAuthTokens: true },
+  logger: { log: authLog },
   // nextCookies()는 항상 마지막 플러그인이어야 한다.
   plugins: [nextCookies()],
 });
