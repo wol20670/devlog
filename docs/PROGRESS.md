@@ -47,3 +47,18 @@
 - 리뷰(Opus): Better Auth Drizzle 어댑터가 insert/mutate 시 `db.transaction()`을 직접 호출함을 확인 → neon-http 대신 WebSocket 드라이버 선택이 필수였음을 재확인. 어댑터 `transaction: true`, scope 중복 제거, typecheck 스크립트 보완은 2/2에 반영 지시.
 - 검증(Opus 재실행): typecheck ✓ / lint ✓ / test 5/5 ✓ / build ✓. 커밋 `0e4c6e3`.
 - 참고: `@types/node`를 ^20 → ^24로 상향(vitest 5 peer 요구, 런타임 Node 24와 일치).
+
+### feature/auth-db (2/2) ~ feature/dashboard — 기능 구현 (구현: Sonnet 5.5, 리뷰·검증·커밋: Opus 5.5)
+| 브랜치 | 커밋 | 내용 | 리뷰에서 발견·조치 |
+|---|---|---|---|
+| feature/auth-db | c402af5 | 인증 라우트, requireUser, proxy, 로그인·앱 셸 | 만료/위조 쿠키 시 proxy ↔ requireUser **리다이렉트 루프** 발견 → proxy의 /login 리다이렉트 제거, 로그인 페이지가 DB 세션으로 판단. `runtime = "nodejs"`는 cacheComponents와 비호환이라 제거 |
+| feature/projects | 19fab89 | 프로젝트 CRUD | 이상 없음 |
+| feature/dev-logs | d6ffce7 | 개발 기록 CRUD, 프로젝트 상세의 기록 목록 | 소유권 검증 직후 프로젝트 삭제 경쟁 조건 → 트랜잭션 내 `FOR SHARE` 잠금 추가 |
+| feature/weekly-review | ab4364e | 주간 통계·회고 CRUD·기본 템플릿 | 이상 없음 |
+| feature/github-activity | 3f5b524 | GitHub 공개 활동 | 공식 문서 확인 결과 PushEvent에 commits/size 없음 → 커밋 수 대신 이벤트 수 표시. Better Auth 소스로 `getAccessToken`이 내부 account.id로 조회함을 확인 |
+| feature/dashboard | 9971846 | 대시보드, 모바일 넘침 보정, loading 스켈레톤 | GitHub 섹션을 별도 Suspense로 분리해 외부 API 지연이 전체 렌더를 막지 않게 함 |
+
+- 병렬 작업: 주간 회고(메인 디렉터리)와 GitHub 활동(git worktree)을 동시에 구현.
+  - 문제: Agent 도구의 자동 worktree가 `origin/main`(스캐폴드) 기준으로 생성되어 구현 전제 코드가 없었음 → 메인 에이전트가 `git worktree add -b feature/github-activity ../devlog-github d6ffce7`로 직접 생성 후 재지시. 완료 후 `feature/dashboard`에 병합, worktree 제거.
+- 모든 기능 브랜치를 origin에 푸시. `main` 병합은 실제 DB·OAuth 검증 후 진행 예정.
+- 서브에이전트 모델 확인: 모든 implementer 호출은 `claude-sonnet-5-5` (첫 호출 transcript로 확인).
