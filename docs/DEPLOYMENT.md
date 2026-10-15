@@ -36,4 +36,12 @@
 
 ## 제약
 
-- Preview 배포에서는 인증이 필요한 기능을 검증하지 않는다. GitHub OAuth App은 callback URL을 하나만 등록할 수 있어, Preview 도메인으로의 로그인 콜백을 지원하지 않는다. Preview는 빌드 성공·비인증 화면 확인 용도로만 사용한다.
+- Preview 배포에서는 인증이 필요한 기능을 검증하지 않는다. Preview URL은 배포마다 바뀌며, GitHub OAuth App의 Redirect URI(최대 10개)에 와일드카드를 허용하면 제어하지 않는 하위 도메인으로 토큰이 전달될 위험이 있어 v1에서는 등록하지 않는다. Preview는 빌드 성공·비인증 화면 확인 용도로만 사용한다.
+
+## 진행 기록
+
+| 날짜 | 작업 | 결과 |
+|---|---|---|
+| 2026-10-15 | `vercel link --project devlog` | 프로젝트 `wol20670s-projects/devlog` 생성. GitHub 저장소 연결은 실패(Vercel GitHub App 미설치 추정) → 대시보드에서 연결 필요 |
+| 2026-10-15 | `vercel integration add neon --plan free_v3 -e production` | Neon `devlog-db` (Free) 생성, **Production 환경에만** 연결. `vercel env ls`로 스코프 확인 |
+| 2026-10-15 | GitHub OAuth App (로컬용) | 사용자 생성 중 — Redirect URI `http://localhost:3000/api/auth/callback/github`, "Expire user access tokens" 사용(Better Auth GitHub provider의 refresh 지원 확인) |

@@ -73,6 +73,8 @@ user 1─* weekly_reviews   (user_id, week_start) UNIQUE
 - 모든 GitHub 요청은 `cache: 'no-store'` (사용자 토큰을 쓰는 응답이 공유 캐시에 남지 않도록). 모듈은 `server-only`.
 - 오류: 401 → 재로그인 안내, 403/429 + `x-ratelimit-*` → 재시도 가능 시각 안내, 그 외 → 오류 카드.
 - 화면에서 "DevLog 기록 통계"와 "GitHub 공개 이벤트"를 분리해 표기. GitHub 수치는 전체 커밋/기여 통계가 아님을 명시.
+- **PushEvent 제약 (2026-10-15 문서 확인)**: payload에 `repository_id`, `push_id`, `ref`, `head`, `before`만 있고 `commits`/`size`/`distinct_size`가 없다. 따라서 커밋 수를 계산·추정하지 않고 "푸시 1회 + 브랜치"로 표시하며, 링크는 compare URL(`{before}...{head}`)을 사용한다.
+- PR 이벤트의 `pull_request` 객체는 축약될 수 있어 `title`/`html_url` 누락 시 `PR #{number}`와 `/pull/{number}` URL로 대체한다. 모든 payload 필드는 방어적으로 파싱한다.
 
 ## 6. 배포 구성
 
@@ -87,3 +89,8 @@ user 1─* weekly_reviews   (user_id, week_start) UNIQUE
 | 2026-10-15 | DB 드라이버를 `neon-http` → `neon-serverless`(Pool)로 결정 | neon-http의 트랜잭션 미지원 |
 | 2026-10-15 | GitHub 조회 범위를 "최근 30일·최대 300건"으로 정정 | 최신 공식 문서 확인 결과 (초안의 90일은 오류) |
 | 2026-10-15 | GitHub 요청 캐시 비활성(`no-store`) | 사용자 토큰 기반 응답의 캐시 격리 설계 전까지 안전 우선 |
+| 2026-10-15 | Route segment `runtime = "nodejs"` 명시 제거 | `cacheComponents: true`와 호환되지 않아 빌드 오류. Next 16 기본 런타임이 Node.js이므로 생략 |
+| 2026-10-15 | proxy에서 `/login → /dashboard` 리다이렉트 제거, 로그인 페이지가 DB 세션으로 판단 | 만료·위조 쿠키가 있을 때 proxy(쿠키만 확인)와 `requireUser`(DB 검증)가 서로 리다이렉트하는 루프 발견 |
+| 2026-10-15 | proxy matcher를 보호 경로 명시 목록으로 변경 | 부정 lookahead matcher가 dev에서 보호 경로에 적용되지 않는 현상 확인 |
+| 2026-10-15 | 기록-프로젝트 연결 시 소유권 검증을 트랜잭션 + `FOR SHARE`로 수행 | 검증 직후 프로젝트 삭제 경쟁 조건 방지 |
+| 2026-10-15 | GitHub 화면에 커밋 수 대신 이벤트 수 표시 | PushEvent payload에서 commits/size 제거됨 |
