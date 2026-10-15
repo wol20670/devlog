@@ -40,7 +40,34 @@
 
 이상 사항: 브랜치 병합 직후 첫 `npm run test`에서 15개 파일이 테스트 수집 전에 실패(`no tests`). 같은 순서(typecheck → lint → test)로 2회 재실행 시 모두 통과하여 재현되지 않음. 원인 미확정.
 
+### 2026-10-15 — 실DB·실OAuth 로컬 E2E (Neon `dev` 브랜치, `npm run dev`, Playwright)
+
+환경: Neon 프로젝트 `devlog-db`의 `dev` 브랜치(엔드포인트 `ep-still-sea…`, 운영 `main`의 `ep-lucky-hat…`과 분리 확인), 로컬 GitHub OAuth App.
+
+| # | 항목 | 방법 | 결과 |
+|---|---|---|---|
+| 1 | 마이그레이션 | `drizzle-kit migrate` (dev 브랜치 직접 연결) | ✅ 7개 테이블 생성, 적용 이력 1건 |
+| 2 | WebSocket Pool 트랜잭션 | 스크립트: BEGIN → INSERT → 조회 → ROLLBACK | ✅ 트랜잭션 내 1건 → 롤백 후 0건 |
+| 3 | 비로그인 라우팅 | curl | ✅ `/` 200, `/login` 200, `/dashboard` 307 → `/login` |
+| 4 | OAuth 요청 | 로그인 버튼 클릭 후 GitHub authorize URL 확인 | ✅ `scope=read:user user:email`, PKCE S256, callback `localhost:3000/api/auth/callback/github` |
+| 5 | GitHub 로그인 (1차) | 사용자가 GitHub 로그인 | ❌ `state_mismatch` — 로그 상 로그인 시작 01:57, 콜백 02:20(23분 경과)으로 OAuth state 만료가 원인 |
+| 6 | GitHub 로그인 (2차) | 즉시 재시도 | ✅ `/dashboard` 진입 → 원인 가설(만료) 확인 |
+| 7 | 토큰 저장 | DB 조회(값 미출력) | ✅ access/refresh token 모두 GitHub 평문 형식(`gho_`/`ghr_`) 아님 → **암호화 저장**, access 만료 8시간, refresh token 존재, `account_id`=GitHub 숫자 ID, scope `read:user,user:email`, 세션 7일 |
+| 8 | 프로젝트 생성 | 폼 제출 | ✅ 상세 이동, 생성 시각 KST(11:22, UTC 02:22) |
+| 9 | 기록 생성(프로젝트 연결) | `/logs/new?projectId=` | ✅ 날짜 기본값 KST 오늘, 프로젝트 기본 선택, 저장·상세 표시 |
+| 10 | 기록 수정 | 제목 변경 | ✅ 반영 |
+| 11 | 주간 회고 | `/reviews/2026-10-12/new` | ✅ 실제 기록 기반 템플릿 생성·저장, 주간 통계 1건/1일, 다음 주(미래) 버튼 비활성 |
+| 12 | 회고 중복 작성 | 같은 주 `/new` 재방문 | ✅ 상세로 redirect |
+| 13 | 존재하지 않는 리소스 | 임의 uuid 프로젝트, 월요일 아닌 주 | ✅ "페이지를 찾을 수 없습니다" |
+| 14 | GitHub 활동 | `/github` | ✅ `@wol20670` 확인, **3페이지 300건**(API 상한) 조회, 기간 09-21~10-08(30일 이내), 유형별 이벤트 수·범위 안내 표시, 푸시는 compare 링크 |
+| 15 | 대시보드 | `/dashboard` | ✅ 통계·최근 기록·프로젝트·회고·GitHub 5건 표시 |
+| 16 | 프로젝트 삭제 | 확인 대화상자 수락 | ✅ 기록 유지, "프로젝트 없음" 표시(DB `project_id` NULL 확인) |
+| 17 | 로그아웃 후 접근 | 기록 상세 URL 직접 접근 | ✅ `/login`으로 이동, DB session 0건 |
+
+발견 사항 → 수정 작업 진행 중:
+- dev 콘솔: 페이지 간 이동 시 Next.js instant navigation 검증 경고(페이지 수준 Suspense 부재). 기능 영향 없음, UX/성능 개선 대상.
+- dev 전용: Next.js dev 도구 버튼이 사이드바 로그아웃 버튼 클릭을 가로챔(Playwright에서 클릭 실패, JS 클릭으로 우회).
+- OAuth state 만료 시 일반 오류 문구만 표시 → 원인별 안내 필요.
+
 ### 미실행 (다음 단계)
-- 실제 Neon `dev` 브랜치 마이그레이션·CRUD·트랜잭션 검증 — DB 브랜치 생성 대기
-- 실제 GitHub OAuth 로그인·활동 조회 — 로컬 OAuth App 키 입력 대기
 - 프로덕션 배포 후 E2E
