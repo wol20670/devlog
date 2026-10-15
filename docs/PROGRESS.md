@@ -21,3 +21,11 @@
   - 해결: 임시 디렉터리에 `devlog`로 생성 후 프로젝트 폴더로 복사.
 - `.gitignore`: `.env*` 무시 유지 + `!.env.example` 예외 추가.
 - 문서 골격 작성: CLAUDE.md, README.md, CHANGELOG.md, docs/*.
+- `.gitattributes`(`eol=lf`) 추가 — Windows CRLF 변환 경고 제거, 줄바꿈 일관성 확보.
+- 초기 커밋 후 GitHub 저장소 생성·푸시: https://github.com/wol20670/devlog (Public, `main`).
+
+### 구현 서브에이전트 검증
+- `.claude/agents/devlog-implementer.md` 생성 (`model: claude-sonnet-5-5`, tools: Read/Write/Edit/Glob/Grep/Bash/PowerShell).
+- 문제: 에이전트 파일을 세션 시작 이후에 만들어 현재 세션의 Agent 도구가 `devlog-implementer`를 인식하지 못함(`Agent type not found`).
+- 검증: 새 headless 세션 `claude -p --agent devlog-implementer --output-format json` 실행 → 정의 로드 성공, `modelUsage`에 `claude-sonnet-5-5` 확인 (haiku는 Claude Code 내부 보조 호출).
+- 조치: Claude Code 세션 재시작 후 Agent 도구로 호출 예정.
