@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -13,7 +15,7 @@ export const metadata: Metadata = { title: "개발 기록" };
 
 const PAGE_SIZE = 50;
 
-export default async function LogsPage({
+async function LogsPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string | string[] }>;
@@ -110,5 +112,13 @@ export default async function LogsPage({
         </div>
       )}
     </>
+  );
+}
+
+export default function LogsPage(props: Parameters<typeof LogsPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <LogsPageContent {...props} />
+    </Suspense>
   );
 }

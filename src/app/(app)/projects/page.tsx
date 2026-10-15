@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { ButtonLink } from "@/components/ui/Button";
@@ -12,7 +14,7 @@ import { listProjects } from "@/server/projects";
 
 export const metadata: Metadata = { title: "프로젝트" };
 
-export default async function ProjectsPage() {
+async function ProjectsPageContent() {
   const user = await requireUser();
   const projects = await listProjects(db, user.id);
 
@@ -61,5 +63,13 @@ export default async function ProjectsPage() {
         </ul>
       )}
     </>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <ProjectsPageContent />
+    </Suspense>
   );
 }

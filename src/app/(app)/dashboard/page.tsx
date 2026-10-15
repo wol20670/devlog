@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { GithubErrorNotice } from "@/components/github/GithubErrorNotice";
@@ -61,7 +62,7 @@ function EmptyCard({
   );
 }
 
-export default async function DashboardPage() {
+async function DashboardPageContent() {
   const user = await requireUser();
   const thisWeek = currentWeekStartKST();
   const range = weekRange(thisWeek);
@@ -216,4 +217,12 @@ async function GithubSection({ userId }: { userId: string }) {
     );
   }
   return <GithubEventList events={result.data.events} limit={5} />;
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <DashboardPageContent />
+    </Suspense>
+  );
 }

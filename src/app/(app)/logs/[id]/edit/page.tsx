@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { updateDevLogAction } from "@/actions/dev-logs";
 import { DevLogForm } from "@/components/dev-logs/DevLogForm";
@@ -10,7 +12,7 @@ import { listProjects } from "@/server/projects";
 
 export const metadata: Metadata = { title: "개발 기록 수정" };
 
-export default async function EditLogPage({
+async function EditLogPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -40,5 +42,13 @@ export default async function EditLogPage({
         cancelHref={`/logs/${log.id}`}
       />
     </>
+  );
+}
+
+export default function EditLogPage(props: Parameters<typeof EditLogPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <EditLogPageContent {...props} />
+    </Suspense>
   );
 }

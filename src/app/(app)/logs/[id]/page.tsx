@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteDevLogButton } from "@/components/dev-logs/DeleteDevLogButton";
@@ -12,7 +14,7 @@ import { getDevLog } from "@/server/dev-logs";
 
 export const metadata: Metadata = { title: "개발 기록 상세" };
 
-export default async function LogDetailPage({
+async function LogDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -77,5 +79,13 @@ export default async function LogDetailPage({
         </dl>
       </Card>
     </>
+  );
+}
+
+export default function LogDetailPage(props: Parameters<typeof LogDetailPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <LogDetailPageContent {...props} />
+    </Suspense>
   );
 }

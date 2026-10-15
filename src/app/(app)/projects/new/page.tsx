@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { createProjectAction } from "@/actions/projects";
 import { ProjectForm } from "@/components/projects/ProjectForm";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -6,7 +8,7 @@ import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "새 프로젝트" };
 
-export default async function NewProjectPage() {
+async function NewProjectPageContent() {
   await requireUser();
   return (
     <>
@@ -18,5 +20,13 @@ export default async function NewProjectPage() {
         cancelHref="/projects"
       />
     </>
+  );
+}
+
+export default function NewProjectPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <NewProjectPageContent />
+    </Suspense>
   );
 }
