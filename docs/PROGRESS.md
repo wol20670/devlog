@@ -21,3 +21,29 @@
   - 해결: 임시 디렉터리에 `devlog`로 생성 후 프로젝트 폴더로 복사.
 - `.gitignore`: `.env*` 무시 유지 + `!.env.example` 예외 추가.
 - 문서 골격 작성: CLAUDE.md, README.md, CHANGELOG.md, docs/*.
+- `.gitattributes`(`eol=lf`) 추가 — Windows CRLF 변환 경고 제거, 줄바꿈 일관성 확보.
+- 초기 커밋 후 GitHub 저장소 생성·푸시: https://github.com/wol20670/devlog (Public, `main`).
+
+### 구현 서브에이전트 검증
+- `.claude/agents/devlog-implementer.md` 생성 (`model: claude-sonnet-5-5`, tools: Read/Write/Edit/Glob/Grep/Bash/PowerShell).
+- 문제: 에이전트 파일을 세션 시작 이후에 만들어 현재 세션의 Agent 도구가 `devlog-implementer`를 인식하지 못함(`Agent type not found`).
+- 검증: 새 headless 세션 `claude -p --agent devlog-implementer --output-format json` 실행 → 정의 로드 성공, `modelUsage`에 `claude-sonnet-5-5` 확인 (haiku는 Claude Code 내부 보조 호출).
+- 조치: Claude Code 세션 재시작 → Agent 도구에서 `devlog-implementer` 인식 확인.
+- 첫 구현 작업 후 서브에이전트 transcript(`subagents/agent-*.jsonl`) 확인: assistant 메시지 37개 모두 `"model":"claude-sonnet-5-5"`, meta `agentType: devlog-implementer`.
+
+### 인프라 (Vercel / Neon)
+- `vercel login`(사용자) → `vercel link --project devlog`로 Vercel 프로젝트 `wol20670s-projects/devlog` 생성.
+  - 문제: 프로젝트 생성 중 GitHub 저장소 연결 실패(Vercel GitHub App 미설치로 추정). → 사용자에게 대시보드에서 Git 연결 요청.
+  - 문제: `vercel link`가 `.gitignore` 끝에 `.env*`를 다시 추가해 `!.env.example` 예외가 무효화됨 → 해당 변경 되돌림, `git check-ignore`로 확인.
+- Neon 요금제 조회(`free_v3` / `launch_v3` / `scale_v3`) 후 **Free** 플랜으로 `devlog-db` 생성, **Production 환경에만** 연결(`-e production`).
+  - `vercel env ls`로 DATABASE_URL 등 Neon 변수가 Production 스코프에만 있는 것 확인.
+  - 통합 설치 시 Neon 에이전트 스킬(`.agents/`, `.claude/skills/neon*`, `skills-lock.json`)이 함께 설치됨 → 로컬 도구로 보고 `.gitignore` 처리.
+
+### feature/auth-db (1/2) — DB 계층·Better Auth 설정 (구현: Sonnet 5.5)
+- Drizzle 스키마(Better Auth 4개 테이블 + projects/dev_logs/weekly_reviews), 초기 마이그레이션 생성.
+- `neon-serverless` Pool: lazy 싱글턴(globalThis), `attachDatabasePool`(@vercel/functions 3.10) 적용, Node 24 내장 WebSocket 사용.
+- Better Auth: GitHub provider, `account.encryptOAuthTokens: true` (설치 버전에서 옵션 존재 확인).
+- Vitest unit/integration 분리, PGlite에 실제 마이그레이션 적용 후 스키마 테스트 5개.
+- 리뷰(Opus): Better Auth Drizzle 어댑터가 insert/mutate 시 `db.transaction()`을 직접 호출함을 확인 → neon-http 대신 WebSocket 드라이버 선택이 필수였음을 재확인. 어댑터 `transaction: true`, scope 중복 제거, typecheck 스크립트 보완은 2/2에 반영 지시.
+- 검증(Opus 재실행): typecheck ✓ / lint ✓ / test 5/5 ✓ / build ✓. 커밋 `0e4c6e3`.
+- 참고: `@types/node`를 ^20 → ^24로 상향(vitest 5 peer 요구, 런타임 Node 24와 일치).
