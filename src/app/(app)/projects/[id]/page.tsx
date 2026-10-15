@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DeleteProjectButton } from "@/components/projects/DeleteProjectButton";
@@ -15,7 +17,7 @@ import { getProject } from "@/server/projects";
 
 export const metadata: Metadata = { title: "프로젝트 상세" };
 
-export default async function ProjectDetailPage({
+async function ProjectDetailPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -75,7 +77,7 @@ export default async function ProjectDetailPage({
         ) : (
           <ul className="flex flex-col gap-2">
             {logs.map((log) => (
-              <li key={log.id}>
+              <li key={log.id} className="min-w-0">
                 <Link href={`/logs/${log.id}`} className="block">
                   <Card className="flex flex-wrap items-baseline gap-x-3 gap-y-1 transition-colors hover:bg-border/20">
                     <span className="shrink-0 text-xs text-muted">
@@ -92,5 +94,13 @@ export default async function ProjectDetailPage({
         )}
       </section>
     </>
+  );
+}
+
+export default function ProjectDetailPage(props: Parameters<typeof ProjectDetailPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <ProjectDetailPageContent {...props} />
+    </Suspense>
   );
 }

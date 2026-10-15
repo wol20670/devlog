@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { updateProjectAction } from "@/actions/projects";
 import { ProjectForm } from "@/components/projects/ProjectForm";
@@ -9,7 +11,7 @@ import { getProject } from "@/server/projects";
 
 export const metadata: Metadata = { title: "프로젝트 수정" };
 
-export default async function EditProjectPage({
+async function EditProjectPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -33,5 +35,13 @@ export default async function EditProjectPage({
         cancelHref={`/projects/${project.id}`}
       />
     </>
+  );
+}
+
+export default function EditProjectPage(props: Parameters<typeof EditProjectPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <EditProjectPageContent {...props} />
+    </Suspense>
   );
 }

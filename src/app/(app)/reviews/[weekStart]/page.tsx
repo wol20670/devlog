@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteReviewButton } from "@/components/reviews/DeleteReviewButton";
@@ -20,7 +22,7 @@ import { getWeeklyReviewByWeek } from "@/server/weekly-reviews";
 
 export const metadata: Metadata = { title: "주간 회고 상세" };
 
-export default async function WeekDetailPage({
+async function WeekDetailPageContent({
   params,
 }: {
   params: Promise<{ weekStart: string }>;
@@ -82,7 +84,7 @@ export default async function WeekDetailPage({
                 <h3 className="min-w-0 break-words text-lg font-semibold">
                   {review.title}
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <ButtonLink href={`/reviews/${weekStart}/edit`}>수정</ButtonLink>
                   <DeleteReviewButton reviewId={review.id} />
                 </div>
@@ -111,5 +113,13 @@ export default async function WeekDetailPage({
         </section>
       </div>
     </>
+  );
+}
+
+export default function WeekDetailPage(props: Parameters<typeof WeekDetailPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <WeekDetailPageContent {...props} />
+    </Suspense>
   );
 }

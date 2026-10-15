@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { loginErrorMessage } from "@/lib/auth-errors";
 import { getSession } from "@/lib/session";
 import { GithubLoginButton } from "./GithubLoginButton";
 
@@ -22,7 +23,7 @@ async function ErrorMessage({
   if (!error) return null;
   return (
     <p role="alert" className="mb-4 text-sm text-danger">
-      로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.
+      {loginErrorMessage(error)}
     </p>
   );
 }

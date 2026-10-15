@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { updateWeeklyReviewAction } from "@/actions/weekly-reviews";
 import { WeeklyReviewForm } from "@/components/reviews/WeeklyReviewForm";
@@ -10,7 +12,7 @@ import { getWeeklyReviewByWeek } from "@/server/weekly-reviews";
 
 export const metadata: Metadata = { title: "주간 회고 수정" };
 
-export default async function EditReviewPage({
+async function EditReviewPageContent({
   params,
 }: {
   params: Promise<{ weekStart: string }>;
@@ -35,5 +37,13 @@ export default async function EditReviewPage({
         cancelHref={`/reviews/${weekStart}`}
       />
     </>
+  );
+}
+
+export default function EditReviewPage(props: Parameters<typeof EditReviewPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <EditReviewPageContent {...props} />
+    </Suspense>
   );
 }

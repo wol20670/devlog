@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import Link from "next/link";
 import { WeeklyStatsCard } from "@/components/reviews/WeeklyStatsCard";
 import { ButtonLink } from "@/components/ui/Button";
@@ -17,7 +19,7 @@ import {
 
 export const metadata: Metadata = { title: "주간 회고" };
 
-export default async function ReviewsPage() {
+async function ReviewsPageContent() {
   const user = await requireUser();
   const thisWeek = currentWeekStartKST();
   const range = weekRange(thisWeek);
@@ -37,7 +39,7 @@ export default async function ReviewsPage() {
             <h2 className="font-semibold">
               이번 주 ({formatDateKST(range.start)} ~ {formatDateKST(range.end)})
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ButtonLink href={`/reviews/${thisWeek}`}>주간 상세</ButtonLink>
               {currentReview ? (
                 <ButtonLink href={`/reviews/${thisWeek}`} variant="primary">
@@ -85,5 +87,13 @@ export default async function ReviewsPage() {
         </section>
       </div>
     </>
+  );
+}
+
+export default function ReviewsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <ReviewsPageContent />
+    </Suspense>
   );
 }

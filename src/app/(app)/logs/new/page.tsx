@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
+import { Suspense } from "react";
 import { createDevLogAction } from "@/actions/dev-logs";
 import { DevLogForm } from "@/components/dev-logs/DevLogForm";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -9,7 +11,7 @@ import { listProjects } from "@/server/projects";
 
 export const metadata: Metadata = { title: "새 개발 기록" };
 
-export default async function NewLogPage({
+async function NewLogPageContent({
   searchParams,
 }: {
   searchParams: Promise<{ projectId?: string | string[] }>;
@@ -43,5 +45,13 @@ export default async function NewLogPage({
         cancelHref="/logs"
       />
     </>
+  );
+}
+
+export default function NewLogPage(props: Parameters<typeof NewLogPageContent>[0]) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <NewLogPageContent {...props} />
+    </Suspense>
   );
 }

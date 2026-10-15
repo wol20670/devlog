@@ -48,3 +48,6 @@ next-env.d.ts
 .agents/
 .claude/skills/neon*
 skills-lock.json
+
+# playwright mcp artifacts
+.playwright-mcp/

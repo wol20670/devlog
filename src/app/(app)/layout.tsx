@@ -33,7 +33,7 @@ async function Shell({ children }: { children: ReactNode }) {
       <header className="border-b border-border bg-surface md:hidden">
         <div className="flex items-center justify-between px-4 py-2">
           <p className="font-mono font-semibold">DevLog</p>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {account}
             <SignOutButton />
           </div>
