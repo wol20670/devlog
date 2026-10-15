@@ -81,12 +81,15 @@ export async function projectBelongsToUser(
   db: Db,
   userId: string,
   projectId: string,
+  { lock = false }: { lock?: boolean } = {},
 ): Promise<boolean> {
   if (!isUuid(projectId)) return false;
-  const [row] = await db
+  const query = db
     .select({ id: projects.id })
     .from(projects)
     .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
     .limit(1);
+  // 트랜잭션 안에서 lock을 켜면 FOR SHARE로 프로젝트 행을 잠가 검증 후 삭제되는 경쟁을 막는다.
+  const [row] = lock ? await query.for("share") : await query;
   return !!row;
 }
