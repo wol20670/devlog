@@ -37,7 +37,7 @@ export default async function ReviewsPage() {
             <h2 className="font-semibold">
               이번 주 ({formatDateKST(range.start)} ~ {formatDateKST(range.end)})
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ButtonLink href={`/reviews/${thisWeek}`}>주간 상세</ButtonLink>
               {currentReview ? (
                 <ButtonLink href={`/reviews/${thisWeek}`} variant="primary">

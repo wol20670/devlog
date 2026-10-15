@@ -47,7 +47,7 @@ export default async function LogDetailPage({
           {log.project ? (
             <Link
               href={`/projects/${log.project.id}`}
-              className="text-accent hover:underline"
+              className="break-words text-accent hover:underline"
             >
               {log.project.name}
             </Link>

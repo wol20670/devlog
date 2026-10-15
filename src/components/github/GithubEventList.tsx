@@ -57,7 +57,7 @@ export function GithubEventList({
                     >
                       {e.repo.name}
                     </a>
-                    <span className="ml-auto text-xs text-muted">
+                    <span className="ml-auto shrink-0 text-xs text-muted">
                       {timeFormatter.format(e.createdAt)}
                     </span>
                   </div>

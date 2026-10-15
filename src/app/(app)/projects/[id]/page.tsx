@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({
         ) : (
           <ul className="flex flex-col gap-2">
             {logs.map((log) => (
-              <li key={log.id}>
+              <li key={log.id} className="min-w-0">
                 <Link href={`/logs/${log.id}`} className="block">
                   <Card className="flex flex-wrap items-baseline gap-x-3 gap-y-1 transition-colors hover:bg-border/20">
                     <span className="shrink-0 text-xs text-muted">

@@ -82,7 +82,7 @@ export default async function WeekDetailPage({
                 <h3 className="min-w-0 break-words text-lg font-semibold">
                   {review.title}
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <ButtonLink href={`/reviews/${weekStart}/edit`}>수정</ButtonLink>
                   <DeleteReviewButton reviewId={review.id} />
                 </div>
