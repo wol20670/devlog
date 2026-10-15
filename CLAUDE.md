@@ -24,8 +24,8 @@ Next.js 16 (App Router, `src/`) · TypeScript · Tailwind CSS 4 · PostgreSQL(Ne
 
 ## 릴리즈 범위
 
-- **v1.0 (현재 우선순위, 계획 기준일 2026-10-15)**: A 인증 / B 프로젝트 CRUD / C 일별 개발 기록 CRUD / D GitHub 공개 활동 조회 / E 주간 통계·회고 / F 대시보드.
-- **v2.0 (기말고사 목표, 백로그만)**: 태그, 검색·필터, GitHub 활동 분석·시각화, 회고 템플릿·Markdown 내보내기, UI/UX·모바일 개선, 품질 개선. **사용자 지시 전에는 구현하지 않는다.**
+- **v1.0 — 2026-10-15 릴리즈 완료 (`v1.0.0`, https://devlog-psi-three.vercel.app)**: A 인증 / B 프로젝트 CRUD / C 일별 개발 기록 CRUD / D GitHub 공개 활동 조회 / E 주간 통계·회고 / F 대시보드.
+- **v2.0 (기말고사 목표, 다음 단계 — 사용자 지시 후 착수)**: 태그, 검색·필터, GitHub 활동 분석·시각화, 회고 템플릿·Markdown 내보내기, UI/UX·모바일 개선, 품질 개선. **사용자 지시 전에는 구현하지 않는다.**
 - 상세: `docs/RELEASE_PLAN.md`. 계획일과 실제 완료일을 구분해 기록한다.
 
 ### v1.0 완료 조건 (DoD)

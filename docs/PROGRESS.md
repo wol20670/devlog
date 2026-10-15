@@ -61,4 +61,39 @@
 - 병렬 작업: 주간 회고(메인 디렉터리)와 GitHub 활동(git worktree)을 동시에 구현.
   - 문제: Agent 도구의 자동 worktree가 `origin/main`(스캐폴드) 기준으로 생성되어 구현 전제 코드가 없었음 → 메인 에이전트가 `git worktree add -b feature/github-activity ../devlog-github d6ffce7`로 직접 생성 후 재지시. 완료 후 `feature/dashboard`에 병합, worktree 제거.
 - 모든 기능 브랜치를 origin에 푸시. `main` 병합은 실제 DB·OAuth 검증 후 진행 예정.
-- 서브에이전트 모델 확인: 모든 implementer 호출은 `claude-sonnet-5-5` (첫 호출 transcript로 확인).
+- 서브에이전트 모델 확인: 이 시점에는 첫 호출 transcript만 확인했음(전체 확인은 아래 릴리즈 항목 참고).
+
+### 로컬 실DB·실OAuth 검증
+- Neon CLI 로그인(사용자) 후 `dev` 브랜치 생성, `.env.local`에 dev pooled URL 기록(값 미출력), 마이그레이션 적용, WebSocket Pool 트랜잭션(BEGIN/ROLLBACK) 확인.
+- 문제: 첫 로그인 `state_mismatch` → 서버 로그로 로그인 시작(01:57)과 콜백(02:20) 사이 23분 경과 확인, OAuth state 만료가 원인. 즉시 재시도로 가설 검증·성공.
+- Playwright E2E 17항목(TEST_REPORT 참고). 발견 3건(instant navigation 경고, dev 도구 버튼이 로그아웃 버튼 가림, state 만료 안내 부족)을 `fix: address findings from local E2E`로 수정 후 재확인(콘솔 오류 0).
+
+### main 병합 (PR #1~#6)
+- 기능 브랜치 순서대로 PR 생성·병합: #1 auth-db, #2 projects, #3 dev-logs, #4 weekly-review, #5 github-activity, #6 dashboard.
+- 문제: #6이 GitHub에서 CONFLICTING으로 표시 → 로컬에서 `origin/main` 병합 시 충돌 없이 병합됨(github-activity가 로컬 병합과 PR #5 두 경로로 들어간 이력 차이). 재검증(98 tests) 후 병합.
+
+### 배포 (Vercel / Neon main)
+- (a) 프로덕션 도메인 `devlog-psi-three.vercel.app` 확인.
+- 사용자: Vercel GitHub App 설치로 저장소 연결(CLI `vercel git connect`는 2회 실패), 프로덕션 OAuth App 생성, `GITHUB_CLIENT_ID/SECRET`을 Production에만 직접 등록.
+- (b) Production `BETTER_AUTH_SECRET`(신규)·`BETTER_AUTH_URL`, Preview `BETTER_AUTH_SECRET`·`DATABASE_URL`(Neon dev) 등록. Production `DATABASE_URL`이 `main` 엔드포인트임을 확인.
+- (c) Neon `main`이 빈 상태임을 확인 후 마이그레이션 적용.
+- (d) PR #7(docs) 병합으로 첫 Git 연동 프로덕션 배포(`c81eb84`, 42초, Ready). 배포 메타 `githubCommitSha`와 로컬 main HEAD 일치 확인.
+- 문제: 프로덕션 로그인 `invalid_code` → 런타임 로그에서 GitHub `incorrect_client_credentials` 확인. Client ID는 authorize URL에서 프로덕션 앱 값으로 확인되어 Secret 불일치로 판단. 사용자가 Secret 재발급·교체 → 재배포 후 성공.
+- 문제: 런타임 로그에서 일시적 DB 연결 시간 초과(1건) 시 Better Auth가 Drizzle 오류를 그대로 출력해 **세션 토큰이 로그에 평문 기록**됨을 발견. 해당 세션은 로그아웃으로 삭제되어 무효(운영 활성 세션 0 확인). `fix: redact database query params from auth logs`(PR #8)로 Better Auth 로거에 redaction 적용.
+  - 함수 리전 확인: 함수는 `iad1`(DB `aws-us-east-1`과 동일 지역). 로그의 `icn1`은 엣지 진입 리전이었음(초기 가설 "리전 불일치"는 틀렸음). 연결 시간 초과 원인은 미확정, 재현되지 않음.
+- PR #8 병합 → 프로덕션 배포(`411cb8c`) → 로그인·대시보드·GitHub·로그아웃 재검증, 해당 배포 런타임 오류 0건.
+
+### 릴리즈 준비
+- 서브에이전트 실행 모델 전수 확인: `devlog-implementer` 실행 9건, transcript의 assistant 메시지 338개 모두 `"model":"claude-sonnet-5-5"`.
+
+| 작업 | 메시지 수 |
+|---|---|
+| DB layer and Better Auth server config | 37 |
+| Auth routes, session guard, app shell UI | 49 |
+| Project CRUD | 42 |
+| Daily dev log CRUD | 54 |
+| Weekly stats and reviews | 43 |
+| GitHub public activity | 40 |
+| Dashboard and UI polish | 49 |
+| Fix findings from local E2E | 12 |
+| Redact DB query params from auth logs | 12 |

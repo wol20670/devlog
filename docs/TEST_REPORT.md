@@ -69,5 +69,34 @@
 - dev 전용: Next.js dev 도구 버튼이 사이드바 로그아웃 버튼 클릭을 가로챔(Playwright에서 클릭 실패, JS 클릭으로 우회).
 - OAuth state 만료 시 일반 오류 문구만 표시 → 원인별 안내 필요.
 
-### 미실행 (다음 단계)
-- 프로덕션 배포 후 E2E
+### 2026-10-15 — E2E 후속 수정 재확인 (로컬)
+- `npm run test`: 16 files / 98 tests 통과 (auth-errors 단위 테스트 추가)
+- 로그인 후 대시보드 → 프로젝트 → 개발 기록 → 주간 회고 → 대시보드 클라이언트 이동: 콘솔 오류 0건 (instant navigation 경고 해소)
+- 사이드바 로그아웃 버튼 일반 클릭 동작 (dev indicator 우하단 이동)
+- `/login?error=oauth&error=state_mismatch` → "로그인 요청 시간이 만료되었습니다. 다시 로그인해 주세요."
+
+### 2026-10-15 — 프로덕션 E2E (https://devlog-psi-three.vercel.app)
+
+| # | 항목 | 배포 | 결과 |
+|---|---|---|---|
+| 1 | 비로그인 라우팅 (curl) | `c81eb84` | ✅ `/` 200, `/login` 200, `/api/auth/ok` 200, `/dashboard` 307 → `/login` |
+| 2 | OAuth 요청 | `c81eb84` | ✅ 프로덕션 client_id, scope `read:user user:email`, PKCE S256, callback `https://devlog-psi-three.vercel.app/api/auth/callback/github` |
+| 3 | 로그인 (1차) | `c81eb84` | ❌ `invalid_code` — 런타임 로그 `incorrect_client_credentials`(Client Secret 불일치) |
+| 4 | 로그인 (Secret 교체·재배포 후) | `c81eb84` 재배포 | ✅ `/dashboard` |
+| 5 | 프로젝트 생성 → 기록 생성(프로젝트 연결) → 주간 회고 작성 | 〃 | ✅ 회고 템플릿에 실제 기록·문제/해결 반영 |
+| 6 | GitHub 활동 | 〃 | ✅ `@wol20670`, 300건, 기간 09-21 ~ 10-15 |
+| 7 | 저장 위치·보안 | 〃 | ✅ Neon `main`(`ep-lucky-hat…`)에 user/session/project/log/review 각 1건, OAuth 토큰 평문 아님, refresh token 존재 |
+| 8 | 모바일 375px | 〃 | ✅ 가로 넘침 없음(scrollWidth 360 ≤ 375), 요일 막대 정상 |
+| 9 | 로그아웃 후 보호 페이지 | 〃 | ✅ `/login` 이동 |
+| 10 | 런타임 로그 점검 | 〃 | ⚠️ 일시적 DB 연결 시간 초과 1건, 이 오류 로그에 세션 토큰 평문 기록 → PR #8로 redaction 적용 |
+| 11 | 최종 재검증 (로그인 → 대시보드 기존 데이터 → GitHub → 로그아웃 → 보호 페이지) | `411cb8c` | ✅, 해당 배포 런타임 오류 0건 |
+
+### 자동 테스트 최종 (main `411cb8c`)
+- `npm run typecheck` / `npm run lint` / `npm run build` 통과
+- `npm run test`: **17 files / 105 tests 통과** (log-redaction 단위 테스트 7개 추가)
+
+### 검증하지 않은 항목 (한계)
+- 두 번째 GitHub 계정을 사용한 운영 환경 교차 사용자 접근 시험은 하지 않음. 사용자 간 데이터 격리는 통합 테스트(PGlite, 실제 마이그레이션)로 검증.
+- Preview 배포의 인증 기능(설계상 미지원).
+- GitHub API rate limit 초과 상황의 실제 재현(단위 테스트로만 검증).
+- 일시적 DB 연결 시간 초과의 원인 규명(재현되지 않음).
