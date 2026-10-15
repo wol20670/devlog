@@ -4,7 +4,8 @@
 
 프로젝트별 작업 내역, 일별 개발·학습 기록, GitHub 공개 활동, 주간 통계와 회고를 한곳에서 관리한다. SNS가 아닌 **개인 개발 기록 관리 서비스**다.
 
-> 상태: v1.0 개발 중. 배포 URL은 배포 검증 후 기재한다.
+- **서비스**: https://devlog-psi-three.vercel.app (GitHub 계정으로 로그인)
+- **버전**: v1.0.0 (2026-10-15) — [변경 이력](CHANGELOG.md)
 
 ## 기능 (v1.0)
 
@@ -48,6 +49,18 @@ npm run dev                  # http://localhost:3000
 | `npm run lint` | ESLint |
 | `npm run test` | 단위 + 통합 테스트 |
 | `npm run db:generate` / `npm run db:migrate` | 마이그레이션 생성 / 적용 |
+
+## 아키텍처 요약
+
+- Next.js 서버 컴포넌트·서버 액션으로 별도 API 서버 없이 구성. DB 접근은 `src/server/*`에서만, 모든 쿼리를 사용자 ID로 스코프
+- Neon PostgreSQL을 `drizzle-orm/neon-serverless`(WebSocket Pool, 트랜잭션 지원)로 연결. 운영(`main`)·개발(`dev`) 브랜치 분리
+- 날짜는 KST 기준(기록일·주 시작일은 `date`, 타임스탬프는 UTC 저장 후 KST 표시)
+
+자세한 내용은 [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## 개발 방식
+
+메인 에이전트(Claude Opus 5.5)가 설계·리뷰·Git·배포를, 구현 서브에이전트(Claude Sonnet 5.5, [`.claude/agents/devlog-implementer.md`](.claude/agents/devlog-implementer.md))가 기능 코드 작성을 맡는 구조로 개발했다. 과정은 [PROGRESS.md](docs/PROGRESS.md)에 기록되어 있다.
 
 ## 문서
 

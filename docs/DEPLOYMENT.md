@@ -1,6 +1,6 @@
 # 배포
 
-> 상태: 계획 (미배포). 실제 수행 후 결과와 URL을 기록한다.
+> 상태: **v1.0.0 프로덕션 배포 완료 (2026-10-15)** — https://devlog-psi-three.vercel.app
 
 ## 구성
 
@@ -51,3 +51,24 @@
 | 2026-10-15 | Vercel ↔ GitHub 연결 재시도 | `vercel git connect` 실패 — Vercel GitHub App 설치 필요(사용자 작업) |
 | 2026-10-15 | 환경변수 | Production: `BETTER_AUTH_SECRET`(신규 랜덤, sensitive), `BETTER_AUTH_URL`. Preview: `BETTER_AUTH_SECRET`(별도), `DATABASE_URL`=Neon dev(sensitive). Production `DATABASE_URL`이 `main` 엔드포인트임을 확인 |
 | 2026-10-15 | (c) 운영 DB 마이그레이션 | `main` 브랜치 빈 상태 확인 후 `drizzle-kit migrate` → 7개 테이블, 이력 1건. 파괴적 변경 없음 |
+| 2026-10-15 | Vercel ↔ GitHub 연결 | 사용자가 Vercel GitHub App 설치 후 대시보드에서 연결. Production Branch `main` 확인 |
+| 2026-10-15 | 프로덕션 OAuth 키 | 사용자가 Vercel 대시보드에서 Production에만 등록(값은 공유하지 않음) |
+| 2026-10-15 | (d) 첫 프로덕션 배포 | PR #7 병합 → Git 자동 배포 `dpl_538riP9…`, 커밋 `c81eb84`, 빌드 42초, Ready. 배포 메타 `githubCommitSha` = main HEAD 확인 |
+| 2026-10-15 | 프로덕션 로그인 실패 | `invalid_code` / 런타임 로그 `incorrect_client_credentials` → Client Secret 불일치. 사용자 재발급·교체 후 `vercel redeploy --target production`으로 해결 |
+| 2026-10-15 | 로그 보안 수정 배포 | PR #8 병합 → `dpl_BX44JER…`, 커밋 `411cb8c`, Ready. 재검증 통과, 런타임 오류 0건 |
+
+## 운영 확인 방법
+
+```bash
+npx vercel ls devlog --prod                       # 최근 프로덕션 배포
+npx vercel inspect <deployment-url> --logs         # 빌드 로그
+npx vercel logs runtime --environment production --since 30m   # 런타임 로그
+npx vercel env ls                                  # 환경변수 이름·스코프 (값은 표시 안 함)
+```
+
+- 함수 리전: `iad1` (Neon `aws-us-east-1`과 같은 지역). 런타임 로그의 `icn1`은 요청이 들어온 엣지 리전.
+- 환경변수 변경 후에는 재배포해야 반영된다.
+
+## 롤백
+
+Vercel 대시보드 Deployments에서 이전 Ready 배포를 "Promote to Production"하거나 `npx vercel rollback`을 사용한다. DB 마이그레이션은 v1.0 기준 초기 1건뿐이며, 이후 스키마 변경은 `dev` 브랜치에서 먼저 검증한다.
