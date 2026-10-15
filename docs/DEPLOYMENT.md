@@ -44,4 +44,10 @@
 |---|---|---|
 | 2026-10-15 | `vercel link --project devlog` | 프로젝트 `wol20670s-projects/devlog` 생성. GitHub 저장소 연결은 실패(Vercel GitHub App 미설치 추정) → 대시보드에서 연결 필요 |
 | 2026-10-15 | `vercel integration add neon --plan free_v3 -e production` | Neon `devlog-db` (Free) 생성, **Production 환경에만** 연결. `vercel env ls`로 스코프 확인 |
-| 2026-10-15 | GitHub OAuth App (로컬용) | 사용자 생성 중 — Redirect URI `http://localhost:3000/api/auth/callback/github`, "Expire user access tokens" 사용(Better Auth GitHub provider의 refresh 지원 확인) |
+| 2026-10-15 | GitHub OAuth App (로컬용) | 생성 완료 — Redirect URI `http://localhost:3000/api/auth/callback/github`, "Expire user access tokens" 사용(Better Auth GitHub provider의 refresh 지원 확인). 로컬 로그인 성공 |
+| 2026-10-15 | Neon `dev` 브랜치 | `neonctl branches create --name dev` (부모: `main`). 엔드포인트 `ep-still-sea…`(dev) / `ep-lucky-hat…`(main) 분리 확인. `.env.local`에 dev pooled URL 기록(값 미출력) |
+| 2026-10-15 | dev 마이그레이션 | 직접 연결로 `drizzle-kit migrate` → 7개 테이블 |
+| 2026-10-15 | (a) 프로덕션 도메인 확정 | `devlog-psi-three.vercel.app` (Vercel 자동 할당) |
+| 2026-10-15 | Vercel ↔ GitHub 연결 재시도 | `vercel git connect` 실패 — Vercel GitHub App 설치 필요(사용자 작업) |
+| 2026-10-15 | 환경변수 | Production: `BETTER_AUTH_SECRET`(신규 랜덤, sensitive), `BETTER_AUTH_URL`. Preview: `BETTER_AUTH_SECRET`(별도), `DATABASE_URL`=Neon dev(sensitive). Production `DATABASE_URL`이 `main` 엔드포인트임을 확인 |
+| 2026-10-15 | (c) 운영 DB 마이그레이션 | `main` 브랜치 빈 상태 확인 후 `drizzle-kit migrate` → 7개 테이블, 이력 1건. 파괴적 변경 없음 |
