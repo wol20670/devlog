@@ -27,6 +27,14 @@ tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell
 - 타임스탬프는 UTC(timestamptz) 저장, 화면 표시는 `Asia/Seoul`. 기록 날짜/주 시작일은 KST 달력 날짜(`date`).
 - 과도한 추상화보다 읽기 쉬운 코드. 주변 코드 스타일·네이밍을 따른다.
 
+## v2 규칙 (설계: `docs/V2_ARCHITECTURE.md`, 지시받은 § 번호를 먼저 읽는다)
+
+- 테이블 간 참조는 `user_id`를 포함한 복합 FK로 만든다. 종류를 강제하는 링크 컬럼(`pr_kind`, `commit_kind` 등)과 FK 컬럼은 NOT NULL로 둔다. CHECK는 NULL 결과가 나오지 않게 쓴다(§4.4).
+- 컬럼 지정 `ON DELETE SET NULL (col)` FK는 Drizzle 스키마에 선언하지 않는다. `npm run db:generate -- --custom`으로 만든 SQL에 쓰고 `src/db/manual-constraints.ts`에 등록한다(§4.5).
+- GitHub App 토큰·private key·webhook secret은 서버 전용 모듈에서만 다룬다. 저장하는 토큰은 `better-auth/crypto`로 암호화한다. Installation token은 저장하지 않는다.
+- 저장소 데이터를 반환하는 서버 함수는 `getVisibleRepoIds`/`assertRepoAccess`로 현재 접근 권한을 거른다(fail-closed).
+- 동기화 상태(`github_sync_state`)는 lease fencing 조건과 §3.4의 상태 전이 SQL로만 바꾼다. webhook 처리 안에서 외부 API를 호출하지 않는다.
+
 ## 개발 환경
 
 Windows + Git Bash. npm 사용. 경로는 슬래시(`/`)로 쓴다.
