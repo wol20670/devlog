@@ -56,6 +56,7 @@
 | 2026-10-15 | (d) 첫 프로덕션 배포 | PR #7 병합 → Git 자동 배포 `dpl_538riP9…`, 커밋 `c81eb84`, 빌드 42초, Ready. 배포 메타 `githubCommitSha` = main HEAD 확인 |
 | 2026-10-15 | 프로덕션 로그인 실패 | `invalid_code` / 런타임 로그 `incorrect_client_credentials` → Client Secret 불일치. 사용자 재발급·교체 후 `vercel redeploy --target production`으로 해결 |
 | 2026-10-15 | 로그 보안 수정 배포 | PR #8 병합 → `dpl_BX44JER…`, 커밋 `411cb8c`, Ready. 재검증 통과, 런타임 오류 0건 |
+| 2026-10-17 | dev 마이그레이션 (v2 Phase 1a) | 적용 직전 `DATABASE_URL` 엔드포인트가 `ep-still-sea…`(dev, 운영 `ep-lucky-hat…`과 다름)인지 확인. 기존 이력 1건의 해시가 로컬 `0000`과 일치함을 확인 후 `drizzle-kit migrate` → `0001_v2_github_integration` 적용(이력 2건, 테이블 7 → 16). `node scripts/check-constraints.mjs` 48항목 OK, 기존 행(user 1, dev_logs 1) 유지. **운영 DB(`main`)에는 적용하지 않음** |
 
 ## 운영 확인 방법
 

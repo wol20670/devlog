@@ -110,3 +110,13 @@
 - 2026-10-15 블로그 발행 설계 초안(`docs/blog-publishing-design`, draft PR #10)은 지우지 않고 `docs/v2-phase0`에 merge로 가져와 v2.1 기준으로 갱신했다. PR #10은 그대로 둔다.
 - 문서: `V2_ARCHITECTURE.md` 신규(확정 계획 §3·§4·§6·§8·§9, 섹션 번호 유지), `RELEASE_PLAN.md`(v2.0·v2.1 범위·구현 순서·완료 조건·승인 기록, 기존 v2 항목은 v2.x로 이동), `BLOG_PUBLISHING_DESIGN.md`(독립 posts·publications, App 2개, 템플릿 전용 초안, 2단계 배포 추적, 미결정 사항 정리 — 이미지 처리만 미결정으로 남김), `CLAUDE.md`·구현 에이전트 지침(v2 원칙), `ARCHITECTURE.md`(v2 안내·설계 변경 기록).
 - 병렬 작업: Phase 1a 구현(메인 작업 트리, `feature/v2-schema`)과 Phase 0 문서(scratchpad의 git worktree, `docs/v2-phase0`)를 동시에 진행해 파일 충돌을 피했다.
+
+### Phase 1a — v2 DB 스키마 (구현: Sonnet 5.5, 리뷰·검증·DB 적용: Opus 5.5)
+- 브랜치 `feature/v2-schema`(`release/v2` 기준). 구현 서브에이전트가 스키마·마이그레이션·통합 테스트·`scripts/check-constraints.mjs`를 작성.
+- 리뷰(Opus)에서 발견·조치:
+  - drizzle-kit이 `projects`·`dev_logs`의 `UNIQUE(id,user_id)` 추가를 파일 끝에 생성 → 이 UNIQUE를 참조하는 `project_repos_project_fk`가 먼저 실행돼 실패. 적용 전에 UNIQUE를 FK 앞으로 수동 재정렬하고 파일 첫 줄에 이유를 주석으로 남김(V2_ARCHITECTURE §4.5-8).
+  - 이름을 지정하지 않은 설치 FK의 기본 이름이 66자 → PostgreSQL이 63자로 잘라 drizzle 스냅샷 이름과 DB 이름이 달라짐(이후 DROP 마이그레이션 실패 위험). `connected_repos_installation_fk`로 명시하고 0001을 재생성, 모든 제약·인덱스 이름 63자 이하 테스트 추가.
+- 검증(Opus 재실행): typecheck ✓ / lint ✓ / test 165/165 ✓ / build ✓. 커밋 `b4545f0`.
+- dev DB 적용: 엔드포인트 `ep-still-sea…` 확인, 기존 이력 해시 일치 확인 → `drizzle-kit migrate` → `check-constraints` 48항목 OK, 적용 해시가 커밋 파일과 일치, 기존 데이터 유지. 운영 DB 미적용.
+- Git: Phase 0 PR #11 병합은 자동 모드에서 "리뷰 없는 병합"으로 차단되어 사용자 확인 대기. Phase 1a 브랜치는 `docs/v2-phase0`을 merge한 stacked 브랜치로 PR 생성.
+- 참고: `check-constraints.mjs`가 `.ts`를 import할 때 Node `MODULE_TYPELESS_PACKAGE_JSON` 경고가 출력된다(동작 영향 없음).

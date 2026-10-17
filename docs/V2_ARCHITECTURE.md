@@ -603,12 +603,18 @@ UPDATE github_sync_state
 | `github_activities` | user_id, (connected_repository_id, user_id) FK cascade, github_repo_id, kind(CHECK 4종), external_id text, node_id, number, **parent_activity_id + parent_kind**(4열 FK → 자기 자신 cascade + **NULL-safe CHECK `act_parent_shape`**, §4.4), title, body_excerpt, state, author_*, html_url, occurred_at, gh_created/updated/merged/closed, merge_commit_sha, on_default_branch, seen_via_pr, is_detached, commits_truncated, commits_total, **reviews_truncated**(PR 행만 의미), is_private, metadata. **unique(user_id, github_repo_id, kind, external_id), unique(id, user_id), unique(id, user_id, connected_repository_id, kind)**, index(user_id, connected_repository_id, occurred_at desc), (user_id, author_github_id) | 1a |
 | `github_pr_commits` | **모든 FK 컬럼 NOT NULL**(user_id, connected_repository_id, pr_activity_id, commit_activity_id), `pr_kind text NOT NULL DEFAULT 'pull_request' CHECK (pr_kind='pull_request')`, `commit_kind text NOT NULL DEFAULT 'commit' CHECK (commit_kind='commit')`, position. **4열 FK 2개** → `github_activities(id, user_id, connected_repository_id, kind)` cascade. PK(pr_activity_id, commit_activity_id) | 1a |
 | `github_pr_sync` | pr_activity_id PK, user_id, connected_repository_id, `pr_kind text NOT NULL DEFAULT 'pull_request' CHECK (pr_kind='pull_request')` — **4열 FK** `(pr_activity_id, user_id, connected_repository_id, pr_kind)` → github_activities cascade(PR 소유·종류 강제). requested_generation, synced_generation, synced_for_updated_at, detail_status(CHECK `pending`/`done`/`error`), attempts, next_run_after, last_error_kind (pending 판정·`error` 의미는 §3.5) | 1a |
-| `github_sync_state` | §3.4(`lease_token`, `change_generation`, `processed_generation`, **`pass_generation` bigint NULL**, **`targeted_pr_numbers integer[] NOT NULL DEFAULT '{}'`** 포함). CHECK: status 6종, `resource = 'pull_requests' OR cardinality(targeted_pr_numbers) = 0`, `cardinality(targeted_pr_numbers) <= 100`. resource는 `default_branch_commits`, `pull_requests`, `pr_details`, `issues`. unique(connected_repository_id, resource), cascade. 저장소 단위 `confirmed_head`, `history_rewritten_at`, `capped`는 `connected_repositories`에 둔다 | 1a |
+| `github_sync_state` | user_id + (connected_repository_id, user_id) → connected_repositories 복합 FK cascade. §3.4(`lease_token`, `change_generation`, `processed_generation`, **`pass_generation` bigint NULL**, **`targeted_pr_numbers integer[] NOT NULL DEFAULT '{}'`** 포함). CHECK: status 6종, `resource = 'pull_requests' OR cardinality(targeted_pr_numbers) = 0`, `cardinality(targeted_pr_numbers) <= 100`. resource는 `default_branch_commits`, `pull_requests`, `pr_details`, `issues`. unique(connected_repository_id, resource), cascade. 저장소 단위 `confirmed_head`, `history_rewritten_at`, `capped`는 `connected_repositories`에 둔다 | 1a |
 | `webhook_deliveries` | delivery_id PK, app, event, action, installation_id, received_at. 30일 지나면 cron으로 정리(§3.8.2) | 1a |
 | `writing_ideas` | user_id, project_id → **수동 SQL**: `FOREIGN KEY (project_id, user_id) REFERENCES projects(id, user_id) ON DELETE SET NULL (project_id)`, title, description, type, status, position, tags text[](GIN), memo. unique(id, user_id) | 2a |
 | `idea_sources` | (idea_id, user_id) → writing_ideas cascade(**idea_id·user_id NOT NULL**), **kind NOT NULL**(`activity`/`dev_log`, CHECK 식이 NULL이 되지 않게 함), activity_id·dev_log_id → **수동 SQL `ON DELETE SET NULL (activity_id)` / `(dev_log_id)`**, snapshot jsonb NOT NULL, unique(idea_id, activity_id), unique(idea_id, dev_log_id) | 2a |
 | `posts` | user_id, idea_id → **수동 SQL `SET NULL (idea_id)`**, type, title, slug, description, tags, body_md, front_matter_extra, status(`draft`/`ready`/`archived`). unique(id, user_id) | 2a |
 | `blogs`, `publications` | v2.1. publications: (post_id, user_id) cascade, blog_id, path, blob_sha, commit_sha, commit_status, deploy_status, published_at, url | 4 |
+
+**Phase 1a 구현 기록 (2026-10-17, 마이그레이션 `0001_v2_github_integration`)**
+- 위 Phase 1a 테이블을 그대로 구현했다. 표에 없던 세부: `github_sync_state`에 `user_id`와 복합 FK를 두어 다른 v2 테이블처럼 사용자 스코프 조회와 cascade를 맞췄다. `github_installations.permissions`(jsonb, `new_permissions_accepted` 반영용), `connected_repositories.access_reason`(예: `repo_deleted`)을 추가했다.
+- 모든 제약에 이름을 붙였다(예: `activities_parent_fk`, `act_parent_shape`, `connected_repos_installation_fk`). 이름은 63자 이하다. PostgreSQL이 긴 이름을 잘라 drizzle 스냅샷과 DB 이름이 달라지는 것을 막기 위해서이고, 테스트로 확인한다.
+- 스키마 코드: `src/db/github-schema.ts`(GitHub 테이블), `src/db/schema.ts`(`project_repositories`, v1 테이블 UNIQUE), `src/db/manual-constraints.ts`(Phase 1은 빈 목록).
+- `external_id`: 커밋은 SHA, 그 외(PR·이슈·리뷰)는 GitHub 숫자 id 문자열. 리뷰 webhook의 PR 조회는 `(connected_repository_id, kind, number)` 인덱스를 쓴다.
 
 **idea_sources CHECK** (PGlite PG 18.6에서 동작 확인 **[검증]**):
 
@@ -668,6 +674,7 @@ CONSTRAINT act_parent_shape CHECK (
    - Phase 1(1a)에서는 목록이 비어 있어 0개를 기대하고, Phase 2a에서 4개로 바뀐다.
 6. **리뷰 규칙**: 이후 `db:generate` 결과 SQL에 `mfk_` 제약의 `DROP CONSTRAINT`가 나오거나, 관련 컬럼의 타입·이름 변경이 생기면 Opus 리뷰에서 반려한다. 컬럼 변경이 필요하면 수동 제약을 다시 만드는 custom 마이그레이션을 함께 작성한다.
 7. 운영 적용 전에 dev 브랜치에서 같은 catalog 쿼리 스크립트(`scripts/check-constraints.mjs`)로 확인한다.
+8. **생성 순서 확인**: drizzle-kit 0.31은 기존 테이블에 추가하는 UNIQUE를 파일 끝에 두어, 그 UNIQUE를 참조하는 새 FK가 먼저 실행되면 실패한다(0001에서 발견). 생성된 SQL에서 참조 대상 UNIQUE가 FK보다 앞에 있는지 확인하고, 필요하면 수동으로 재정렬한 뒤 파일 첫 줄에 SQL 주석으로 이유를 남긴다. 재정렬은 DB에 적용하기 전에만 한다(적용 후 파일을 바꾸면 해시가 달라진다).
 
 ### 4.2 삭제 순서 (트랜잭션)
 
