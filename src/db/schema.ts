@@ -1,17 +1,21 @@
 import { relations } from "drizzle-orm";
 import {
   date,
+  foreignKey,
   index,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { account, session, user } from "./auth-schema";
+import { createdAt, updatedAt } from "./columns";
+import { connectedRepositories } from "./github-schema";
 
 export * from "./auth-schema";
+export * from "./github-schema";
 
 export const projectStatusEnum = pgEnum("project_status", [
   "planning",
@@ -19,14 +23,6 @@ export const projectStatusEnum = pgEnum("project_status", [
   "paused",
   "completed",
 ]);
-
-const createdAt = () =>
-  timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
-const updatedAt = () =>
-  timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull();
 
 export const projects = pgTable(
   "projects",
@@ -41,7 +37,10 @@ export const projects = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("projects_user_id_idx").on(t.userId)],
+  (t) => [
+    index("projects_user_id_idx").on(t.userId),
+    unique("projects_id_user_id_unique").on(t.id, t.userId),
+  ],
 );
 
 export const devLogs = pgTable(
@@ -64,7 +63,10 @@ export const devLogs = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("dev_logs_user_id_log_date_idx").on(t.userId, t.logDate)],
+  (t) => [
+    index("dev_logs_user_id_log_date_idx").on(t.userId, t.logDate),
+    unique("dev_logs_id_user_id_unique").on(t.id, t.userId),
+  ],
 );
 
 export const weeklyReviews = pgTable(
@@ -82,6 +84,30 @@ export const weeklyReviews = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [unique("weekly_reviews_user_id_week_start_unique").on(t.userId, t.weekStart)],
+);
+
+export const projectRepositories = pgTable(
+  "project_repositories",
+  {
+    projectId: uuid("project_id").notNull(),
+    userId: text("user_id").notNull(),
+    connectedRepositoryId: uuid("connected_repository_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.connectedRepositoryId] }),
+    foreignKey({
+      columns: [t.projectId, t.userId],
+      foreignColumns: [projects.id, projects.userId],
+      name: "project_repos_project_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.connectedRepositoryId, t.userId],
+      foreignColumns: [connectedRepositories.id, connectedRepositories.userId],
+      name: "project_repos_repo_fk",
+    }).onDelete("cascade"),
+    index("project_repos_connected_repository_idx").on(t.connectedRepositoryId),
+  ],
 );
 
 // user 관계는 테이블당 한 번만 정의해야 하므로 인증/앱 관계를 여기서 함께 선언한다.
@@ -116,3 +142,5 @@ export type DevLog = typeof devLogs.$inferSelect;
 export type NewDevLog = typeof devLogs.$inferInsert;
 export type WeeklyReview = typeof weeklyReviews.$inferSelect;
 export type NewWeeklyReview = typeof weeklyReviews.$inferInsert;
+export type ProjectRepository = typeof projectRepositories.$inferSelect;
+export type NewProjectRepository = typeof projectRepositories.$inferInsert;

@@ -95,6 +95,27 @@
 - `npm run typecheck` / `npm run lint` / `npm run build` 통과
 - `npm run test`: **17 files / 105 tests 통과** (log-redaction 단위 테스트 7개 추가)
 
+### 2026-10-17 — v2 Phase 1a 스키마 (feature/v2-schema, 커밋 b4545f0)
+
+실행자: 구현 서브에이전트가 실행한 뒤 메인 에이전트(Opus)가 같은 명령을 다시 실행. 환경: Windows 11, Node 24.20, PGlite.
+
+| 명령 | 결과 |
+|---|---|
+| `npm run typecheck` | 통과 (exit 0) |
+| `npm run lint` | 통과 |
+| `npm run test` | **19개 파일 / 165개 테스트 통과** (기존 105개 그대로 + 신규 60개, 기존 테스트 파일 수정 없음 → v1 회귀 없음) |
+| `npm run build` | 성공 (exit 0) |
+| `node scripts/check-constraints.mjs` (dev DB, 마이그레이션 적용 후) | 48항목 OK: v2 테이블 9, 이름 있는 FK 9·UNIQUE 10·CHECK 19, `mfk_` 제약 0 = 목록 0 |
+
+신규 테스트:
+
+| 파일 | 검증 내용 (V2_ARCHITECTURE.md §6.2 번호) |
+|---|---|
+| integration/github-schema | 교차 사용자 연결 5종 거부(#1), 다른 저장소 PR↔커밋 거부(#9a), 이슈·커밋을 PR 자리에 거부(#9b), 리뷰 부모 규칙(#9c), `pr_kind`/`commit_kind` NULL 거부(#9e·#9f), `parent_kind` NULL 우회 거부(#9g), 종류 위장·부모 있는 비리뷰 거부(#9h), 정상 연결 성공·이슈/타인 `pr_sync` 거부(#9i), cascade 5종, 재연결 후 중복 0(#6), sync_state 기본값·enum·`targeted_pr_numbers` 100/101, pr_sync 세대 CHECK, 기타 CHECK·unique, webhook delivery `ON CONFLICT DO NOTHING` |
+| integration/manual-constraints | `MANUAL_CONSTRAINTS` 항목 존재·정의 확인과 `mfk_` 개수 일치(#9d 틀, Phase 1은 0), 이름 있는 FK·CHECK 전체 catalog 존재, 자기참조 FK 정의, 제약·인덱스 이름 63자 이하 |
+
+- 위반 테스트는 거부 여부뿐 아니라 오류의 **위반 제약 이름**까지 확인한다(NOT NULL 위반인 #9e·#9f는 `null value in column` 메시지).
+
 ### 검증하지 않은 항목 (한계)
 - 두 번째 GitHub 계정을 사용한 운영 환경 교차 사용자 접근 시험은 하지 않음. 사용자 간 데이터 격리는 통합 테스트(PGlite, 실제 마이그레이션)로 검증.
 - Preview 배포의 인증 기능(설계상 미지원).

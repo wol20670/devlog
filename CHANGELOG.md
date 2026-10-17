@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+v2 작업 중(`release/v2`). 아직 운영에 배포하지 않았다.
+
+### Added
+- v2 설계 문서: `docs/V2_ARCHITECTURE.md`, v2.1 블로그 발행 설계 갱신
+- v2 GitHub 저장소 통합 DB 스키마(마이그레이션 `0001_v2_github_integration`): GitHub App 자격 증명, 설치, 연결 저장소, 프로젝트↔저장소, 활동, PR↔커밋, PR 상세 동기화, 동기화 상태, webhook delivery. 사용자·저장소·종류 무결성을 복합 FK와 CHECK로 DB에서 강제
+- `scripts/check-constraints.mjs`: DB 제약 catalog 읽기 전용 확인
+
+### Changed
+- `projects`, `dev_logs`에 `UNIQUE(id, user_id)` 추가(복합 FK 참조용, 기존 데이터와 항상 호환)
+
 ## [1.0.0] - 2026-10-15
 
 첫 릴리즈(MVP). 프로덕션: https://devlog-psi-three.vercel.app

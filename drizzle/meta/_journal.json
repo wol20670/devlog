@@ -8,6 +8,13 @@
       "when": 1792025683510,
       "tag": "0000_lyrical_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792240673484,
+      "tag": "0001_v2_github_integration",
+      "breakpoints": true
     }
   ]
 }
