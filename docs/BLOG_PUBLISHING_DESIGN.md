@@ -1,7 +1,7 @@
 # 설계: 저장소 활동 → 기술 블로그 발행 연동
 
-> 상태: **설계 초안 (2026-10-15)**. 구현은 사용자 승인 후 시작한다. v1.0.0 범위가 아니다.
-> 미결정 사항은 §9에 정리했다.
+> 상태: **v2.1 설계 (2026-10-17 확정 계획 반영)**. 초안은 2026-10-15에 작성했다. 글감·초안은 v2.0, 블로그 발행은 v2.1 범위이며 v2.1 구현은 별도 승인 후 시작한다.
+> 전체 v2 설계는 [V2_ARCHITECTURE.md](V2_ARCHITECTURE.md), 결정 사항은 §9에 있다.
 
 ## 1. 배경과 목표
 
@@ -12,7 +12,7 @@
 결정된 방향 (2026-10-15 사용자 확인):
 - 발행 대상: **GitHub Pages 블로그** (예: [`wol20670/my-blog`](https://github.com/wol20670/my-blog), Jekyll Chirpy)
 - 연동 방식: **활동 선택 → 초안 생성 → DevLog에서 편집 → 발행**. 자동 발행은 하지 않는다.
-- 진행 방식: **설계 먼저**, 구현 범위와 릴리즈 배치는 이후 결정
+- 진행 방식: **설계 먼저**. 릴리즈 배치는 2026-10-17에 확정했다(§9)
 
 비목표: 티스토리·Velog·Medium 자동 발행(아래 §2), 댓글·팔로우 등 소셜 기능, 다른 사람 블로그 모아보기.
 
@@ -45,12 +45,13 @@
 ## 4. 사용자 흐름
 
 ```
-[1] 블로그 연결         블로그 저장소 선택 → 구조 자동 감지(_posts, _config.yml) → 설정 확인
-[2] 소스 선택           저장소 / 기간 선택 → 커밋·PR·README 목록 + DevLog 개발 기록에서 재료 고르기
-[3] 초안 생성           글 유형(Troubleshooting / Exploration) 선택 → 구조에 맞춘 초안 생성
-[4] 편집·미리보기       DevLog 에디터에서 Markdown 편집, front matter 검증(BLOG_POLICY 규칙)
-[5] 발행               블로그 저장소에 `_posts/...md` 커밋 → Actions 빌드 → 글 URL 표시
-[6] 이후               DevLog에서 발행 상태·URL 추적, 수정 시 같은 파일 업데이트
+[v2.0] 저장소 연결·동기화   Reader App 설치 → 저장소 선택 → 커밋·PR·리뷰·이슈 동기화
+[v2.0] 글감                활동·개발 기록에서 글감 저장(근거 snapshot) → 칸반에서 상태 관리
+[v2.0] 초안                글감 → 글 유형(Troubleshooting / Exploration) 선택 → 템플릿 초안 → 편집·미리보기
+                           블로그 연결 없이 쓸 수 있다. front matter는 Chirpy 프리셋으로 검증
+[v2.1] 블로그 연결          Publisher App 설치 → 블로그 저장소 선택 → 구조 자동 감지(_posts, _config.yml)
+[v2.1] 발행                초안을 블로그 설정으로 재검증 → `_posts/...md` 커밋 → Actions 실행·Pages 배포 추적 → 글 URL
+[v2.1] 이후                발행 상태·URL 추적, 수정 발행은 같은 파일을 sha로 갱신
 ```
 
 v1의 **개발 기록 → Troubleshooting 초안** 매핑이 핵심 재사용 지점이다.
@@ -63,70 +64,91 @@ v1의 **개발 기록 → Troubleshooting 초안** 매핑이 핵심 재사용 �
 | 배운 점 | 배운 점 |
 | 프로젝트 / 저장소 | tags 후보, 본문 링크 |
 
-## 5. 데이터 모델 (v1 스키마 확장, 추가만)
+## 5. 데이터 모델 (추가 마이그레이션만)
 
-| 테이블 | 주요 컬럼 | 비고 |
+초안 단계에서 쓰던 `posts.blog_id`·`post_sources` 구조는 **폐기**했다. posts가 블로그에 의존하면 v2.0(초안)이 v2.1(발행) 스키마를 먼저 요구하게 되기 때문이다. 상세 컬럼과 제약은 [V2_ARCHITECTURE.md](V2_ARCHITECTURE.md) §4.1을 따른다.
+
+| 테이블 | 릴리즈 | 역할 |
 |---|---|---|
-| `blogs` | id, user_id, repo_full_name, branch(기본 `main`), posts_dir(기본 `_posts`), filename_pattern(기본 `{date}-{slug}.md`), site_url, preset(`chirpy`), front_matter_defaults(jsonb) | 사용자당 여러 개 가능, 기본 1개 |
-| `posts` | id, user_id, blog_id, status(`draft`/`published`/`publish_failed`), type(`troubleshooting`/`exploration`), title, slug, description, tags(text[]), body_md, published_path, published_sha, published_url, published_at | 블로그 글 초안·발행 상태 |
-| `post_sources` | id, post_id, kind(`dev_log`/`commit`/`pull_request`/`readme`), ref(로그 id·커밋 sha·PR 번호), repo_full_name, snapshot(jsonb) | 초안 생성에 쓴 재료. 원본이 바뀌어도 근거가 남도록 스냅샷 |
+| `writing_ideas` | v2.0 | 글감. 상태 `collected`/`planned`/`drafting`/`published`, 프로젝트 연결(삭제 시 `project_id`만 NULL) |
+| `idea_sources` | v2.0 | 글감의 근거(GitHub 활동 또는 개발 기록). 원본이 지워져도 `snapshot`이 남는다 |
+| `posts` | v2.0 | 초안. **블로그와 독립**이다. 한 글감에서 여러 초안(시리즈)을 만들 수 있다. 상태 `draft`/`ready`/`archived` |
+| `blogs` | v2.1 | 블로그 저장소 설정(경로, 파일명 규칙, 프리셋, front matter 기본값) |
+| `publications` | v2.1 | 발행 기록: (post_id, user_id) cascade, blog_id, path, blob_sha, commit_sha, `commit_status`, `deploy_status`, `deploy_status_raw`, published_at, url |
 
-규칙: 모든 쿼리는 `user_id`로 스코프하고, `blog_id`와 `dev_log` 소스의 소유권을 검증한다(v1과 동일 원칙).
+규칙: 모든 쿼리는 `user_id`로 스코프하고, 참조는 `user_id`를 포함한 복합 FK로 DB에서 강제한다(V2_ARCHITECTURE.md §4.4).
 
 ### 5.1 발행 파일 생성
-- 파일 경로: `{posts_dir}/{YYYY-MM-DD}-{slug}.md`. 날짜는 발행 시각 KST, slug는 영문 소문자·숫자·하이픈. 한글 제목이면 사용자가 slug를 입력한다.
-- front matter는 YAML 직렬화 라이브러리로 생성한다(문자열 이스케이프 오류 방지). `date`는 `+0900`.
-- 검증(발행 전 차단): category 정확히 1개, 허용값 외 category 금지, tags에 category와 같은 값 금지, title·description 비어 있지 않음, 같은 경로 파일이 이미 있으면 덮어쓰지 않고 확인을 요청한다.
+- 파일 경로: `{posts_dir}/{YYYY-MM-DD}-{slug}.md`. slug는 영문 소문자·숫자·하이픈이다. 한글 제목이면 사용자가 slug를 입력한다.
+- **`date`는 초안에 저장하지 않는다.** 발행 시점에 `publications.published_at`(KST)으로 정하고, 파일명 날짜와 front matter(`+0900`)에 넣는다.
+- front matter는 YAML 직렬화 라이브러리로 생성한다(문자열 이스케이프 오류 방지).
+- 검증(발행 전 차단): category 정확히 1개, 허용값 외 category 금지, tags에 category와 같은 값 금지, title·description 비어 있지 않음, Liquid 문법 이스케이프, 비밀값 패턴 경고, private 출처 경고. 초안 단계에서는 Chirpy 프리셋으로, 발행할 때는 블로그 설정으로 다시 검증한다.
 
-## 6. GitHub 권한 설계 (가장 중요한 변경)
+### 5.2 발행과 배포 추적
+- **커밋**: 로컬에서 blob SHA를 계산한다. 새 글은 생성 전용으로 커밋하고, 수정 발행은 저장된 blob SHA를 넘겨 갱신한다. 409(SHA 불일치)이면 충돌로 표시하고 **덮어쓰지 않는다.** 결과는 `commit_status`(`pending`/`committed`/`conflict`/`failed`)에 기록한다.
+- **배포 추적(2단계)**: ① `GET /actions/runs?head_sha=<commit>`으로 workflow 실행 상태를 본다. ② 실행이 성공하면 `GET /pages/deployments/{sha}`로 Pages 배포 상태를 본다.
+- 내부 `deploy_status`는 하나의 enum으로 통일하고, GitHub 원본 값은 `deploy_status_raw`에 보존한다. 변환은 `mapPagesStatus()` 한 곳에서 한다.
 
-v1은 **읽기 전용 최소 scope**(`read:user`, `user:email`)만 쓴다. 블로그 발행에는 **블로그 저장소 쓰기**, 소스 수집에는 **저장소 읽기**(비공개 저장소 포함 가능)가 필요하다.
+  | 내부 `deploy_status` | GitHub 원본 |
+  |---|---|
+  | `not_started` | — |
+  | `queued`, `building` | Actions run `queued` / `in_progress` |
+  | `build_failed` | run `failure` |
+  | `cancelled` | run `cancelled` |
+  | `not_triggered` | run 없음(시간 초과) |
+  | `deploying` | Pages deployment 진행 중 |
+  | `deployed` | Pages `succeed` |
+  | `deploy_failed` | `deployment_failed`, `deployment_lost` |
+  | `superseded` | 이후 커밋의 배포에 포함됨 |
 
-| 방식 | 권한 범위 | 평가 |
-|---|---|---|
-| OAuth App에 `public_repo`/`repo` scope 추가 | 사용자의 **모든** 공개(또는 전체) 저장소 쓰기 | ❌ 과도한 권한. 토큰 유출 시 영향이 큼 |
-| **GitHub App (권장)** | 사용자가 **선택한 저장소에만** 설치, 저장소별 세분화 권한: Contents read/write(블로그), Contents·Pull requests·Metadata read(소스) | ✅ 최소 권한, 사용자가 저장소 단위로 철회 가능 |
+- `deployed`가 되면 글감 상태가 자동으로 `published`가 된다. 실패하면 글감·초안 상태는 바꾸지 않고 publication에만 실패를 기록한다.
+- **외부 수정**: 블로그 저장소에서 직접 수정된 글은 SHA 비교로 충돌만 표시한다. 블로그 쪽 수정을 DevLog로 가져오지는 않는다(v2.x 백로그).
 
-권장 구조:
-- **로그인은 기존 OAuth App + Better Auth를 유지한다** (v1 영향 없음).
-- 저장소 접근용으로 **별도 GitHub App**을 등록한다. 사용자가 DevLog에서 "블로그 연결"을 누르면 App 설치 화면으로 이동해 블로그 저장소와 소스 저장소를 선택한다.
-- 서버는 **installation access token**(1시간 유효, 설치된 저장소로 한정)을 그때그때 발급받아 사용하고 저장하지 않는다. App private key는 Vercel 환경변수(sensitive)로 관리한다.
-- installation이 **현재 로그인한 GitHub 사용자 소유인지** 검증한다(`account.accountId`와 installation account id 비교, v1과 같은 원칙).
+## 6. GitHub 권한 설계
+
+v1은 **읽기 전용 최소 scope**(`read:user`, `user:email`)만 쓴다. 소스 수집에는 저장소 읽기(비공개 포함 가능)가, 발행에는 블로그 저장소 쓰기가 필요하다. OAuth App에 `repo` scope를 추가하는 방식은 사용자의 모든 저장소 권한을 요구하므로 쓰지 않는다.
+
+**확정 구조: 로그인 OAuth App 유지 + GitHub App 2개**
+
+| App | 릴리즈 | 권한 | 용도 |
+|---|---|---|---|
+| Reader | v2.0 | Repository Metadata·Contents·Pull requests·Issues **Read-only**, 조직 권한 없음 | 저장소 활동 동기화 |
+| Publisher | v2.1 | Contents **Read & write**, Metadata·Pages·Actions **Read**. **Workflows 권한 없음** | 블로그 글 커밋, 배포 추적 |
+
+- 로그인은 기존 OAuth App + Better Auth를 그대로 쓴다(v1 영향 없음).
+- 두 App을 나눠서, 소스 저장소에는 쓰기 권한이 생기지 않게 한다.
+- 사용자 접근 검증은 App의 **User Access Token**(`GET /user/installations`)으로 하고, 서버 동기화·발행은 저장소 단위로 축소한 **Installation Token**(1시간 유효, 메모리에만 캐시)으로 한다. App private key는 Vercel 환경변수(sensitive)로 관리한다.
+- 조직 설치는 여러 사용자가 공유하는 전역 객체다. 그래서 "설치 계정 = 로그인 사용자" 비교 대신, user token으로 그 사용자가 실제로 접근 가능한 저장소인지 확인한다(V2_ARCHITECTURE.md §3.1~3.3).
+- 각 App은 별도 webhook 엔드포인트와 secret을 쓴다: `/api/github/webhook/reader`, `/api/github/webhook/publisher`.
 
 ## 7. 초안 생성 방식
 
-| 방식 | 장점 | 단점 |
-|---|---|---|
-| A. 템플릿 조립 (외부 AI 없음) | 비용 0, 예측 가능, 개인정보 외부 전송 없음 | 문장이 기계적. 사용자가 많이 다듬어야 함 |
-| B. AI 초안 (Claude, Vercel AI Gateway) | 커밋·PR·기록을 읽고 자연스러운 서술 초안 생성, BLOG_POLICY 구조 준수 지시 가능 | 호출 비용, 저장소 코드·메시지의 외부 모델 전송, 사실 왜곡 위험 → "없는 수치를 만들지 않는다" 규칙과 근거 링크 필수 |
+**확정: 템플릿 조립만 한다(외부 AI 없음).** 비용이 없고 예측 가능하며, 저장소 코드·메시지를 외부 모델로 보내지 않는다.
 
-권장: **A를 기본으로 구현**하고, B는 사용자가 켜는 선택 기능으로 둔다. B를 도입하면 프롬프트에 BLOG_POLICY 규칙을 넣고, 초안의 각 주장에 근거 소스(커밋·PR·기록)를 표시해 사용자가 확인하게 한다.
+- `buildDraft(idea, sources, preset)`가 BLOG_POLICY 섹션 구조로 초안을 만든다. 근거가 없는 섹션에는 `<!-- 작성 필요 -->`만 넣는다. **수치나 사실은 만들지 않는다.**
+- 출처 링크는 "참고한 활동" 목록으로 사용자 문장과 분리한다.
+- AI 초안·글감 추천은 v2.x 백로그다.
 
 ## 8. 화면
 
-- `/blog/settings`: 블로그 연결(App 설치), 저장소 구조 감지 결과, 경로·front matter 기본값
-- `/blog/new`: 소스 선택(저장소 → 기간 → 커밋/PR/README, DevLog 기록) → 글 유형 선택 → 초안 생성
-- `/blog/posts/[id]`: Markdown 편집기 + 미리보기 + front matter 폼 + 검증 결과 + 발행 버튼
-- `/blog/posts`: 초안·발행 목록, 발행 URL, 실패 사유
-- 기존 화면 연결: 개발 기록 상세에 "블로그 초안 만들기", 대시보드에 "최근 발행 글"
+- v2.0: `/repos`(저장소 연결·동기화), `/activity`(활동 목록), `/ideas`(글감 칸반·목록), `/drafts`(초안 편집·미리보기), `/galaxy`(Development Galaxy)
+- v2.1: 블로그 연결·설정 화면, 초안 화면의 발행 패널(검증 결과·발행 버튼·배포 상태), 발행 목록. 경로는 Phase 4 착수 때 정한다.
+- 기존 화면 연결: 개발 기록 상세에서 글감 만들기, 대시보드에 글감 섹션
 
-## 9. 미결정 사항 (사용자 결정 필요)
+## 9. 결정 사항 (2026-10-17 확정)
 
-1. **릴리즈 배치**: v2.0 범위를 이 기능 중심으로 재정의할지, 기존 v2 항목(태그·검색·시각화 등)에 추가할지
-2. **초안 생성**: 템플릿만(A) / AI 선택 기능 포함(A+B)
-3. **발행 방식**: `main`에 바로 커밋(즉시 배포) / 블로그 저장소에 PR 생성 후 사용자가 GitHub에서 병합
-4. **이미지**: 1차 범위에서 제외할지(텍스트·코드·Mermaid만), 아니면 `assets/img` 업로드 지원
-5. **비공개 저장소**를 소스로 허용할지(허용 시 비공개 코드·메시지가 공개 블로그로 옮겨질 위험 → 발행 전 경고)
-6. 부트캠프의 다른 참여자 블로그도 Chirpy인지(프리셋 우선순위 결정)
+| # | 질문 | 결정 |
+|---|---|---|
+| 1 | 릴리즈 배치 | v2.0 = GitHub 통합 + 글감 + 초안 + Galaxy, v2.1 = 발행. 기존 v2 항목(태그·검색·시각화 등)은 v2.x 백로그 |
+| 2 | 초안 생성 | 템플릿만(A). AI(B)는 v2.x |
+| 3 | 발행 방식 | 블로그 설정의 브랜치에 Contents API로 직접 커밋(생성 전용, sha 기반 수정, 409 충돌 표시). 블로그 저장소 PR 방식은 v2.x 검토 |
+| 4 | 이미지 | **미결정** — Phase 4 착수 전에 확인한다. 그전까지는 텍스트·코드·Mermaid만 다룬다 |
+| 5 | 비공개 저장소 소스 | 허용한다. 글감 근거 snapshot에 `is_private_at_capture`를 남기고, 초안 검증·발행 전에 경고하고 확인을 받는다. private 저장소 링크를 본문에 넣지 않도록 경고한다 |
+| 6 | 다른 참여자 블로그 구성 | 같다고 가정하지 않는다. Chirpy 프리셋을 기본으로 제공하고 경로·파일명·front matter는 블로그별 설정으로 둔다 |
 
-## 10. 단계 제안 (구현 승인 후)
+## 10. 단계
 
-1. GitHub App 등록·설치 흐름, 블로그 연결과 구조 감지 (권한 검증 테스트 포함)
-2. `posts` CRUD + 편집기·미리보기 + front matter 검증
-3. 개발 기록 → Troubleshooting 초안(템플릿)
-4. 발행(커밋) + 상태 추적 + 실패 처리. **테스트용 블로그 저장소**에서 먼저 검증한 뒤 실제 블로그에 적용
-5. 커밋·PR·README 소스 수집 → 초안 재료
-6. (선택) AI 초안, Markdown 내보내기(Velog·티스토리용)
+구현 순서와 완료 조건은 [RELEASE_PLAN.md](RELEASE_PLAN.md)의 v2.0(Phase 2c 초안)·v2.1(Phase 4·5b)을 따른다. 발행은 **테스트용 블로그 저장소**에서 먼저 검증하고, 실제 `my-blog` 발행은 사용자 승인 후 1회 한다.
 
 ## 11. 위험 요소
 
@@ -134,3 +156,4 @@ v1은 **읽기 전용 최소 scope**(`read:user`, `user:email`)만 쓴다. 블�
 - **블로그 빌드 실패**: 잘못된 front matter나 Liquid 문법(`{{ }}`, `{% %}`)이 본문에 있으면 Jekyll 빌드가 깨질 수 있다. 발행 전 검증, 코드 블록 내 Liquid 이스케이프(`{% raw %}`)가 필요하다.
 - **덮어쓰기**: 사용자가 블로그 저장소에서 직접 수정한 글을 DevLog가 덮어쓰지 않도록, 수정 발행 시 파일 sha를 비교한다.
 - **개인정보·비공개 코드 노출**: 비공개 저장소 내용을 공개 블로그로 옮길 때 사용자 확인 단계를 둔다.
+- **빌드·배포 상태 오인**: Actions 실행 성공과 Pages 배포 성공은 다르다. 두 단계를 따로 추적하고, 실행되지 않은 경우(`not_triggered`)도 구분해 표시한다(§5.2).

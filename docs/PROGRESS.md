@@ -97,3 +97,16 @@
 | Dashboard and UI polish | 49 |
 | Fix findings from local E2E | 12 |
 | Redact DB query params from auth logs | 12 |
+
+## 2026-10-17 — v2 착수
+
+### 계획 확정
+- v2.0/v2.1 실행 계획을 rev.1 → rev.4 final까지 사용자 리뷰로 보정하고 확정(승인 범위: Phase 0, Phase 1a, dev DB 마이그레이션).
+  - rev.4 final 마지막 보정 3건: PR 상세 요청과 `pr_details` 리소스 상태 연결(같은 트랜잭션 dirty), 리뷰 300개 상한과 부재 기반 삭제의 충돌(리뷰 upsert 전용으로 단순화), `processed_generation` 갱신 조건(pass 세대 + 결과 5종 단일 SQL).
+  - GitHub 공식 문서로 확인: 리뷰 목록은 시간순·개수 제한 없음, 제출된 리뷰는 삭제 불가, PR 커밋 목록은 최대 250개.
+
+### Phase 0 — 문서·브랜치
+- `main`(`6a64eab`)에서 `release/v2` 생성·푸시. v2 작업은 `release/v2` 기준으로 PR 병합.
+- 2026-10-15 블로그 발행 설계 초안(`docs/blog-publishing-design`, draft PR #10)은 지우지 않고 `docs/v2-phase0`에 merge로 가져와 v2.1 기준으로 갱신했다. PR #10은 그대로 둔다.
+- 문서: `V2_ARCHITECTURE.md` 신규(확정 계획 §3·§4·§6·§8·§9, 섹션 번호 유지), `RELEASE_PLAN.md`(v2.0·v2.1 범위·구현 순서·완료 조건·승인 기록, 기존 v2 항목은 v2.x로 이동), `BLOG_PUBLISHING_DESIGN.md`(독립 posts·publications, App 2개, 템플릿 전용 초안, 2단계 배포 추적, 미결정 사항 정리 — 이미지 처리만 미결정으로 남김), `CLAUDE.md`·구현 에이전트 지침(v2 원칙), `ARCHITECTURE.md`(v2 안내·설계 변경 기록).
+- 병렬 작업: Phase 1a 구현(메인 작업 트리, `feature/v2-schema`)과 Phase 0 문서(scratchpad의 git worktree, `docs/v2-phase0`)를 동시에 진행해 파일 충돌을 피했다.
