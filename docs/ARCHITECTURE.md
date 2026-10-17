@@ -1,6 +1,7 @@
 # 아키텍처
 
 > 상태: v1.0.0 구현·배포 기준 (2026-10-15). 변경 사항은 "설계 변경 기록"에 추가한다.
+> v2(GitHub 저장소 통합·글감·초안·Galaxy, v2.1 발행) 설계는 [V2_ARCHITECTURE.md](V2_ARCHITECTURE.md)에 있다. v2는 이 문서의 계층 구조·보안 경계·날짜 규칙을 그대로 따르고, 테이블은 추가 마이그레이션으로만 늘린다.
 
 ## 1. 기술 선택과 이유
 
@@ -96,3 +97,6 @@ user 1─* weekly_reviews   (user_id, week_start) UNIQUE
 | 2026-10-15 | GitHub 화면에 커밋 수 대신 이벤트 수 표시 | PushEvent payload에서 commits/size 제거됨 |
 | 2026-10-15 | 페이지 단위 `<Suspense>`로 런타임 데이터 접근 감싸기 | 공유 레이아웃의 Suspense는 클라이언트 이동에 적용되지 않아 instant navigation이 차단됨(dev 검증 경고) |
 | 2026-10-15 | Better Auth 로거에 DB 쿼리 파라미터 마스킹 적용 | 운영 로그에서 Drizzle 오류의 params로 세션 토큰이 노출된 사례 발견 |
+| 2026-10-17 | v2 설계 확정(rev.4 final): 로그인 OAuth App 유지 + GitHub App(Reader·Publisher) 분리 | 저장소 단위 최소 권한. OAuth `repo` scope는 모든 저장소 권한을 요구함 |
+| 2026-10-17 | v2 참조 무결성을 `user_id` 포함 복합 FK + NOT NULL + NULL-safe CHECK로 DB에서 강제 | 서버 코드 실수로 다른 사용자·저장소·종류의 행이 연결되는 것을 구조적으로 차단. 복합 FK는 MATCH SIMPLE이라 NULL로 검사를 우회할 수 있음을 PGlite로 확인 |
+| 2026-10-17 | v2 동기화를 DB 영속 상태 + lease fencing + 세대 카운터 + POST 배치(코드 예산 45s) + 일일 cron으로 설계 | Vercel Hobby에서 별도 큐 인프라 없이 동작. `after()`는 라우트 maxDuration 안에서만 실행됨 |
